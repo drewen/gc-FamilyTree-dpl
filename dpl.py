@@ -1,15 +1,28 @@
-from flask import Flask, jsonify, request, abort
-import sqlite3
 import os
-
+import csv
+import sqlite3
+from functools import wraps
+from flask import Flask, jsonify, request, abort, Response
 
 app = Flask(__name__)
 
 
 app.config.update(dict(
     DATABASE=os.path.join(app.root_path, 'brothers.db'),
-    DEBUG=False
+    DEBUG=True,
+    USERNAME='admin',
+    PASSWORD='password'
 ))
+
+
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not check_auth(auth.username, auth.password):
+            return authenticate()
+        return f(*args, **kwargs)
+    return decorated
 
 
 def init_db():
@@ -39,7 +52,9 @@ class Brother:
         obj['nickname'] = self.nickname
         obj['big'] = self.big
         obj['year'] = self.year
-        obj['littles'] = self.littles
+        obj['littles'] = []
+        for i in self.littles:
+            obj['littles'].append(i.serialize())
         return obj
 
     def create(self):
@@ -51,6 +66,7 @@ class Brother:
         cur.close()
         conn.commit()
         conn.close()
+        self.littles = self.getLittles()
         return self
 
     def read(self):
@@ -77,6 +93,7 @@ class Brother:
         cur.close()
         conn.commit()
         conn.close()
+        self.littles = self.getLittles()
         return self
 
     def delete(self):
@@ -94,14 +111,14 @@ class Brother:
         conn = _get_conn()
         cur = conn.cursor()
         t = (self.nickname,)
-        cmd = 'SELECT nickname FROM brothers WHERE big = ?'
+        cmd = 'SELECT * FROM brothers WHERE big = ?'
         cur.execute(cmd, t)
         res = cur.fetchall()
         cur.close()
         conn.close()
         littles = []
         for i in res:
-            littles.append(i[0])
+            littles.append(Brother(i[0], i[1], i[2], i[3]))
         return littles
 
 
@@ -115,20 +132,26 @@ def getAllBrothers():
     return brothers
 
 
+@app.route('/dpl/search/<q>', methods=['GET'])
 def search(q):
     conn = _get_conn()
     cur = conn.cursor()
     q = '%' + q + '%'
-    t = (q, q, q)
-    cmd = 'SELECT * FROM brothers WHERE nickname LIKE ? OR name LIKE ? OR year LIKE ?'
+    t = (q, q, q, q)
+    cmd = 'SELECT * FROM brothers WHERE nickname LIKE ? OR name LIKE ? OR big LIKE ? OR year LIKE ?'
     cur.execute(cmd, t)
-    res = cur.fetchall()
+    allBrothers = cur.fetchall()
     cur.close()
     conn.close()
-    return res
+    brothers = []
+    for bro in allBrothers:
+        brothers.append(Brother(bro[0], bro[1], bro[2], bro[3]).serialize())
+    res = {}
+    res['brothers'] = brothers
+    return jsonify(res)
 
 
-@app.route('/dpl/', methods=['GET'])
+@app.route('/dpl/brothers/', methods=['GET'])
 def readAll():
     allBrothers = getAllBrothers()
     brothers = []
@@ -139,14 +162,15 @@ def readAll():
     return jsonify(res)
 
 
-@app.route('/dpl/', methods=['POST'])
+@app.route('/dpl/brothers/', methods=['POST'])
+@requires_auth
 def create():
     req = request.get_json()
     nickname = req.get('nickname', '')
     name = req.get('name', '')
     big = req.get('big', '')
     year = req.get('year', '')
-    if nickname and name and year:
+    if nickname and name:
         try:
             brother = Brother(nickname, name, big, year).create()
             return jsonify(brother.serialize())
@@ -156,7 +180,26 @@ def create():
         abort(400)
 
 
-@app.route('/dpl/<nickname>', methods=['GET'])
+@app.route('/dpl/import/', methods=['POST'])
+@requires_auth
+def uploadCsv():
+    file = request.files['file']
+    ext = os.path.splitext(file.filename)[-1].lower()
+    if file is not None and ext == '.csv':
+        filestream = csv.DictReader(file)
+        brothers = []
+        for row in filestream:
+            bro = Brother(row['Nickname'], row['Name'], row['Big'], row['Year'])
+            if Brother(row['Nickname']).read() is None:
+                bro.create()
+            else:
+                bro.update()
+        return readAll()
+    else:
+        abort(400)
+
+
+@app.route('/dpl/brothers/<nickname>', methods=['GET'])
 def readOne(nickname):
     brother = Brother(nickname).read()
     if brother:
@@ -165,16 +208,16 @@ def readOne(nickname):
         abort(404)
 
 
-@app.route('/dpl/<nickname>', methods=['PUT'])
+@app.route('/dpl/brothers/<nickname>', methods=['PUT'])
+@requires_auth
 def update(nickname):
     brother = Brother(nickname).read()
     if brother:
         req = request.get_json()
-        nickname = req.get('nickname', '')
         name = req.get('name', '')
         big = req.get('big', '')
         year = req.get('year', '')
-        if nickname and name and year:
+        if nickname and name:
             try:
                 brother = Brother(nickname, name, big, year).update()
                 return jsonify(brother.serialize())
@@ -186,7 +229,8 @@ def update(nickname):
         abort(404)
 
 
-@app.route('/dpl/<nickname>', methods=['DELETE'])
+@app.route('/dpl/brothers/<nickname>', methods=['DELETE'])
+@requires_auth
 def delete(nickname):
     brother = Brother(nickname).read()
     if brother:
@@ -202,6 +246,7 @@ def delete(nickname):
 # nickname is the nickname of the big
 # expects little to be the nickname of the little
 @app.route('/dpl/add-little/<nickname>', methods=['PUT'])
+@requires_auth
 def addLittle(nickname):
     req = request.get_json()
     little = req.get('little', None)
@@ -216,6 +261,25 @@ def addLittle(nickname):
             abort(500)
     else:
         abort(404)
+
+
+def check_auth(username, password):
+    return username == app.config['USERNAME'] and password == app.config['PASSWORD']
+
+
+def authenticate():
+    return Response(
+        'Unauthorized', 401,
+        {'WWW-Authenticate': 'Basic realm="Login Required"'})
+
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers['Content-Type'] = 'text/json'
+    response.headers['Access-Control-Allow-Methods'] = 'POST, GET, PUT, DELETE'
+    response.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With,Content-Type, Accept, Authorization'
+    return response
 
 
 if __name__ == '__main__':
