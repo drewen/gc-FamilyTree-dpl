@@ -28,7 +28,7 @@ def requires_auth(f):
 def init_db():
     conn = _get_conn()
     cur = conn.cursor()
-    cur.execute('CREATE TABLE brothers (nickname TEXT PRIMARY KEY, name TEXT, big TEXT, year INT)')
+    cur.execute('CREATE TABLE IF NOT EXISTS brothers (nickname TEXT PRIMARY KEY, name TEXT, big TEXT, year INT)')
     cur.close()
     conn.commit()
     conn.close()
