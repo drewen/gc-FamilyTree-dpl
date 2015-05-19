@@ -127,7 +127,7 @@ class DplTestCase(unittest.TestCase):
         )
         response = self.app.get('/dpl/brothers/Vaporizer')
         expected = Vaporizer
-        expected['littles'] = [Karu, Sanctus]
+        expected['littles'] = [Sanctus, Karu]
         expected['littles'][0]['littles'] = []
         expected['littles'][1]['littles'] = []
         assert response.status_code == 200
@@ -185,7 +185,7 @@ class DplTestCase(unittest.TestCase):
         response = self.app.get('/dpl/search/Vaporizer')
         Karu['littles'] = []
         Sanctus['littles'] = []
-        Vaporizer['littles'] = [Karu, Sanctus]
+        Vaporizer['littles'] = [Sanctus, Karu]
         expected = dict(brothers=[Vaporizer, Karu, Sanctus])
         assert response.status_code == 200
         assert json.loads(response.data) == expected

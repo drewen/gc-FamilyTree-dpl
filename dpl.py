@@ -45,6 +45,10 @@ class Brother:
         self.big = big
         self.year = year
         self.littles = self.getLittles()
+        self.weight = self.getWeight()
+
+    def __lt__(self, other):
+        return self.weight > other.weight
 
     def serialize(self):
         obj = {}
@@ -119,7 +123,23 @@ class Brother:
         littles = []
         for i in res:
             littles.append(Brother(i[0], i[1], i[2], i[3]))
-        return littles
+        return self.sortLittles(littles)
+
+    def sortLittles(self, littles):
+        res = []
+        littles.sort()
+        for i, val in enumerate(littles):
+            if i % 2:
+                res.insert(0, val)
+            else:
+                res.append(val)
+        return res
+
+    def getWeight(self):
+        weight = 1
+        for i in self.littles:
+            weight += i.weight
+        return weight
 
 
 def getAllBrothers():
