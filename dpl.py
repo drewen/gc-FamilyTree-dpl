@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 
 app.config.update(dict(
-    DATABASE=os.path.join(app.root_path, 'brothers.db'),
+    DATABASE=os.path.join(app.root_path, '../data/brothers.db'),
     DEBUG=True,
     USERNAME='admin',
     PASSWORD='password'
