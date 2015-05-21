@@ -2,16 +2,29 @@ import os
 import csv
 import sqlite3
 from functools import wraps
-from flask import Flask, jsonify, request, abort, Response
+from StringIO import StringIO
+from flask import Flask, jsonify, request, abort, Response, make_response
 
 app = Flask(__name__)
+
+
+def getUsername():
+    with open(os.path.join(app.root_path, '../data/username'), 'r') as f:
+        username = f.read()
+    return username
+
+
+def getPassword():
+    with open(os.path.join(app.root_path, '../data/password'), 'r') as f:
+        password = f.read()
+    return password
 
 
 app.config.update(dict(
     DATABASE=os.path.join(app.root_path, '../data/brothers.db'),
     DEBUG=True,
-    USERNAME='admin',
-    PASSWORD='password'
+    USERNAME=getUsername(),
+    PASSWORD=getPassword()
 ))
 
 
@@ -217,6 +230,18 @@ def uploadCsv():
         return readAll()
     else:
         abort(400)
+
+
+@app.route('/dpl/export/', methods=['GET'])
+def downloadCsv():
+    si = StringIO()
+    writer = csv.writer(si)
+    writer.writerow(['Name', 'Nickname', 'Big', 'Year'])
+    for row in getAllBrothers():
+        writer.writerow([row[1], row[0], row[2], str(row[3])])
+    response = make_response(si.getvalue())
+    response.headers['Content-Disposition'] = 'attachment; filename=brothers.csv'
+    return response
 
 
 @app.route('/dpl/brothers/<nickname>', methods=['GET'])

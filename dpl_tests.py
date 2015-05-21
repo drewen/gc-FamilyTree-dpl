@@ -230,6 +230,19 @@ class DplTestCase(unittest.TestCase):
         response = self.app.get('/dpl/brothers/')
         assert json.loads(response.data) == expected
 
+    def test_csv_download(self):
+        response = self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        response = self.app.get('/dpl/export/')
+        assert response.status_code == 200
+        expected = ['Name,Nickname,Big,Year',
+                    'Andrew Smith,Vaporizer,McLovin\',2014']
+        assert response.data.splitlines() == expected
+
     def test_bad_endpoints(self):
         response = self.app.post('/dpl/brothers/spam')
         assert response.status_code == 405
