@@ -12,23 +12,23 @@ If you don't, look into getting those...
 2. Run `pip install virtualenv`
 3. Run `virtualenv venv`
 4. Run `. venv/bin/activate`
-5. Run `pip install flask`
+5. Run `pip install -r requirements.txt`
 
 #### To start:
 1. Make sure virtualenv is active
-2. Run `python dpl.py`
+2. Run `python wsgi.py`
 
-Simple as that.
+Simple as that. Now it's running on 127.0.0.1:8051
 
 Endpoints:
 
-`/dpl/`:
+`/dpl/brothers/`:
 
 GET: returns JSON of all brothers in the database
 
 POST: creates a new brother from given parameters and returns the JSON for that brother
 
-`/dpl/<nickname>`:
+`/dpl/brothers/<nickname>`:
 
 GET: returns JSON for brother with that nickname
 
@@ -52,13 +52,3 @@ A Brother looks like this:
 }
 "year" is graduation year
 ```
-
-TODO:
-
-[ ] Cleanup readme
-
-[ ] Expose search endpoint
-
-[ ] Add .csv upload
-
-[ ] Add authorization/password security
