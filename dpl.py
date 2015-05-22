@@ -48,7 +48,9 @@ def init_db():
 
 
 def _get_conn():
-    return sqlite3.connect(app.config['DATABASE'])
+    conn = sqlite3.connect(app.config['DATABASE'])
+    conn.text_factory = str
+    return conn
 
 
 class Brother:
@@ -219,8 +221,8 @@ def uploadCsv():
     file = request.files['file']
     ext = os.path.splitext(file.filename)[-1].lower()
     if file is not None and ext == '.csv':
+        file.stream = StringIO(file.stream.read().decode('latin_1').encode('utf_8'))
         filestream = csv.DictReader(file)
-        brothers = []
         for row in filestream:
             bro = Brother(row['Nickname'], row['Name'], row['Big'], row['Year'])
             if Brother(row['Nickname']).read() is None:
