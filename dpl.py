@@ -10,13 +10,13 @@ app = Flask(__name__)
 
 def getUsername():
     with open(os.path.join(app.root_path, '../data/username'), 'r') as f:
-        username = f.read()
+        username = f.readline()
     return username
 
 
 def getPassword():
     with open(os.path.join(app.root_path, '../data/password'), 'r') as f:
-        password = f.read()
+        password = f.readline()
     return password
 
 
@@ -143,11 +143,19 @@ class Brother:
     def sortLittles(self, littles):
         res = []
         littles.sort()
-        for i, val in enumerate(littles):
-            if i % 2:
-                res.insert(0, val)
-            else:
-                res.append(val)
+        # for i, val in enumerate(littles):
+        #     if i % 2:
+        #         res.insert(0, val)
+        #     else:
+        #         res.append(val)
+        if len(littles) % 2:
+            res.append(littles.pop(0))
+        while len(littles):
+            res.insert(0, littles.pop(0))
+            res.append(littles.pop(0))
+            if len(littles):
+                res.insert(0, littles.pop())
+                res.append(littles.pop())
         return res
 
     def getWeight(self):
