@@ -1,10 +1,10 @@
 from setuptools import setup
 
-setup(name='YourAppName',
+setup(name='gc-familytree-dpl',
       version='1.0',
-      description='OpenShift App',
-      author='Your Name',
-      author_email='example@example.com',
-      url='http://www.python.org/sigs/distutils-sig/',
-#      install_requires=['Django>=1.3'],
+      description='Data Persistence Layer/RESTful API for WPI Men\'s Glee Club Family Tree',
+      author='Andrew Smith',
+      author_email='amsmith514@gmail.com',
+      url='https://github.com/drewen/gc-familytree-dpl',
+      py_modules=['dpl', 'wsgi'],
      )

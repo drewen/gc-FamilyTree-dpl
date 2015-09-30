@@ -9,14 +9,20 @@ app = Flask(__name__)
 
 
 def getUsername():
-    with open(os.path.join(app.root_path, '../data/username'), 'r') as f:
-        username = f.readline()
+    try:
+        with open(os.path.join(app.root_path, '../data/username'), 'r') as f:
+            username = f.readline()
+    except:
+        username = 'admin'
     return username
 
 
 def getPassword():
-    with open(os.path.join(app.root_path, '../data/password'), 'r') as f:
-        password = f.readline()
+    try:
+        with open(os.path.join(app.root_path, '../data/password'), 'r') as f:
+            password = f.readline()
+    except:
+        password = 'password'
     return password
 
 
@@ -143,11 +149,6 @@ class Brother:
     def sortLittles(self, littles):
         res = []
         littles.sort()
-        # for i, val in enumerate(littles):
-        #     if i % 2:
-        #         res.insert(0, val)
-        #     else:
-        #         res.append(val)
         if len(littles) % 2:
             res.append(littles.pop(0))
         while len(littles):
@@ -229,15 +230,29 @@ def uploadCsv():
     file = request.files['file']
     ext = os.path.splitext(file.filename)[-1].lower()
     if file is not None and ext == '.csv':
+        errors = []
         file.stream = StringIO(file.stream.read().decode('latin_1').encode('utf_8'))
         filestream = csv.DictReader(file)
         for row in filestream:
             bro = Brother(row['Nickname'], row['Name'], row['Big'], row['Year'])
             if Brother(row['Nickname']).read() is None:
-                bro.create()
+                try:
+                    bro.create()
+                except Exception, e:
+                    errors.append(str(e))
             else:
-                bro.update()
-        return readAll()
+                try:
+                    bro.update()
+                except Exception, e:
+                    errors.append(str(e))
+        if errors == []:
+            res = 'All rows imported successfully!'
+        else:
+            errors.prepend('Errors found with this import:')
+            res = '\n'.join(errors)
+        res = Response(res)
+        res.headers['Content-Type'] = 'text/html'
+        return res
     else:
         abort(400)
 
@@ -331,7 +346,8 @@ def authenticate():
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers['Content-Type'] = 'text/json'
+    if response.headers['Content-Type'] != 'text/html':
+        response.headers['Content-Type'] = 'text/json'
     response.headers['Access-Control-Allow-Methods'] = 'POST, GET, PUT, DELETE'
     response.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With,Content-Type, Accept, Authorization'
     return response

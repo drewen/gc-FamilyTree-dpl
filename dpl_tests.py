@@ -127,7 +127,7 @@ class DplTestCase(unittest.TestCase):
         )
         response = self.app.get('/dpl/brothers/Vaporizer')
         expected = Vaporizer
-        expected['littles'] = [Sanctus, Karu]
+        expected['littles'] = [Karu, Sanctus]
         expected['littles'][0]['littles'] = []
         expected['littles'][1]['littles'] = []
         assert response.status_code == 200
@@ -185,7 +185,7 @@ class DplTestCase(unittest.TestCase):
         response = self.app.get('/dpl/search/Vaporizer')
         Karu['littles'] = []
         Sanctus['littles'] = []
-        Vaporizer['littles'] = [Sanctus, Karu]
+        Vaporizer['littles'] = [Karu, Sanctus]
         expected = dict(brothers=[Vaporizer, Karu, Sanctus])
         assert response.status_code == 200
         assert json.loads(response.data) == expected
@@ -213,7 +213,7 @@ class DplTestCase(unittest.TestCase):
         Vaporizer['littles'] = [Karu]
         expected = dict(brothers=[Vaporizer, Karu])
         assert response.status_code == 200
-        assert json.loads(response.data) == expected
+        assert response.data == 'All rows imported successfully!'
         response = self.app.get('/dpl/brothers/')
         assert json.loads(response.data) == expected
         csvString = 'Nickname,Name,Year,Big\nVaporizer,Andrew Smoth,2014,McLovin\''
@@ -226,7 +226,7 @@ class DplTestCase(unittest.TestCase):
         Vaporizer['name'] = 'Andrew Smoth'
         expected = dict(brothers=[Vaporizer, Karu])
         assert response.status_code == 200
-        assert json.loads(response.data) == expected
+        assert response.data == 'All rows imported successfully!'
         response = self.app.get('/dpl/brothers/')
         assert json.loads(response.data) == expected
 
