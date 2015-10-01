@@ -30,6 +30,18 @@ Dishficks = dict(
     nickname='Dishficks',
     year=2017
 )
+DumpsterTurtle = dict(
+    name='Jeremy Filteau',
+    nickname='Dumpster Turtle',
+    big='Dishficks',
+    year=2018
+)
+DoubleAgent = dict(
+    name='Cory Lauer',
+    nickname='Double Agent',
+    big='Vaporizer',
+    year=2013
+)
 
 
 class DplTestCase(unittest.TestCase):
@@ -190,6 +202,67 @@ class DplTestCase(unittest.TestCase):
         assert response.status_code == 200
         assert json.loads(response.data) == expected
 
+    def test_sort_littles(self):
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Sanctus),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Karu),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Dishficks),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(DumpsterTurtle),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(DoubleAgent),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.put(
+            '/dpl/add-little/Vaporizer',
+            data=json.dumps(dict(little='Dishficks')),
+            content_type='application/json',
+            headers=self.auth
+        )
+        response = self.app.get('/dpl/brothers/Vaporizer')
+        expected = Vaporizer
+        Karu['littles'] = []
+        Sanctus['littles'] = []
+        DumpsterTurtle['littles'] = []
+        DoubleAgent['littles'] = []
+        Dishficks['littles'] = [DumpsterTurtle]
+        # heaviest in the middle, other two sorted by insertion order around center
+        expected['littles'] = [DoubleAgent, Dishficks, Sanctus, Karu]
+        assert json.loads(response.data) == expected
+        self.app.delete(
+            '/dpl/brothers/Sanctus',
+            headers=self.auth
+        )
+        response = self.app.get('/dpl/brothers/Vaporizer')
+        expected['littles'] = [Karu, Dishficks, DoubleAgent]
+        assert json.loads(response.data) == expected
+
     def test_search(self):
         self.app.post(
             '/dpl/brothers/',
@@ -338,12 +411,18 @@ class DplTestCase(unittest.TestCase):
             content_type='application/json',
             headers=self.auth
         )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Karu),
+            content_type='application/json',
+            headers=self.auth
+        )
         os.chmod(dpl.app.config['DATABASE'], 0400)
-        # response = self.app.delete(
-        #     '/dpl/brothers/Vaporizer',
-        #     headers=self.auth
-        # )
-        # assert response.status_code == 500
+        response = self.app.delete(
+            '/dpl/brothers/Vaporizer',
+            headers=self.auth
+        )
+        assert response.status_code == 500
         response = self.app.put(
             '/dpl/brothers/Vaporizer',
             data=json.dumps(Vaporizer),
@@ -358,6 +437,26 @@ class DplTestCase(unittest.TestCase):
             headers=self.auth
         )
         assert response.status_code == 500
+        response = self.app.put(
+            '/dpl/add-little/Vaporizer',
+            data=json.dumps(dict(little='Karu')),
+            content_type='application/json',
+            headers=self.auth
+        )
+        assert response.status_code == 500
+
+        csvString = 'Name,Nickname,Big,Year\nAndrew Smith,Vaporizer,McLovin\',2014\nSebastian Espinosa,Dishficks,Vaporizer,2017'
+        response = self.app.post(
+            '/dpl/import/',
+            data=dict(file=(StringIO(csvString), 'upload.csv')),
+            content_type='multipart/form-data',
+            headers=self.auth
+        )
+        expected = '\n'.join([
+            'Errors found with this import:',
+            'attempt to write a readonly database',
+            'attempt to write a readonly database'])
+        assert response.data == expected
 
 if __name__ == '__main__':
     unittest.main()

@@ -248,7 +248,7 @@ def uploadCsv():
         if errors == []:
             res = 'All rows imported successfully!'
         else:
-            errors.prepend('Errors found with this import:')
+            errors.insert(0, 'Errors found with this import:')
             res = '\n'.join(errors)
         res = Response(res)
         res.headers['Content-Type'] = 'text/html'
@@ -304,9 +304,10 @@ def update(nickname):
 def delete(nickname):
     brother = Brother(nickname).read()
     if brother:
-        if brother.delete():
+        try:
+            brother.delete()
             return jsonify('')
-        else:
+        except:
             abort(500)
     else:
         abort(404)
@@ -353,5 +354,5 @@ def after_request(response):
     return response
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     app.run(host='0.0.0.0', port=80)
