@@ -89,6 +89,33 @@ class DplTestCase(unittest.TestCase):
         assert response.status_code == 200
         assert json.loads(response.data) == expected
 
+    def test_update_brother(self):
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        VaporizerEditted = dict(
+            name='Andrew Smorf',
+            nickname='Vaporizer',
+            big='Steve',
+            year=2010,
+            littles=[]
+        )
+        response = self.app.put(
+            '/dpl/brothers/Vaporizer',
+            data=json.dumps(VaporizerEditted),
+            content_type='application/json',
+            headers=self.auth
+        )
+        expected = VaporizerEditted
+        assert response.status_code == 200
+        assert json.loads(response.data) == expected
+        response = self.app.get('/dpl/brothers/Vaporizer')
+        assert response.status_code == 200
+        assert json.loads(response.data) == expected
+
     def test_delete_brother(self):
         self.app.post(
             '/dpl/brothers/',
@@ -243,13 +270,94 @@ class DplTestCase(unittest.TestCase):
                     'Andrew Smith,Vaporizer,McLovin\',2014']
         assert response.data.splitlines() == expected
 
-    def test_bad_endpoints(self):
+    def test_bad_request(self):
+        response = self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(dict(nickname='Vaporizer')),
+            content_type='application/json',
+            headers=self.auth
+        )
+        assert response.status_code == 400
+        response = self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(dict(name='Andrew Smith')),
+            content_type='application/json',
+            headers=self.auth
+        )
+        assert response.status_code == 400
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        response = self.app.put(
+            '/dpl/brothers/Vaporizer',
+            data=json.dumps(dict(nickname='Vaporizer')),
+            content_type='application/json',
+            headers=self.auth
+        )
+        assert response.status_code == 400
+
+    def test_resource_not_found(self):
+        response = self.app.get(
+            '/dpl/brothers/spam',
+            headers=self.auth
+        )
+        assert response.status_code == 404
+        response = self.app.put(
+            '/dpl/brothers/spam',
+            headers=self.auth
+        )
+        assert response.status_code == 404
+        response = self.app.delete(
+            '/dpl/brothers/spam',
+            headers=self.auth
+        )
+        assert response.status_code == 404
+        response = self.app.put(
+            '/dpl/add-little/spam',
+            data=json.dumps(dict(little='Dishficks')),
+            content_type='application/json',
+            headers=self.auth
+        )
+        assert response.status_code == 404
+
+    def test_method_not_allowed(self):
         response = self.app.post('/dpl/brothers/spam')
         assert response.status_code == 405
         response = self.app.put('/dpl/brothers/')
         assert response.status_code == 405
         response = self.app.delete('/dpl/brothers/')
         assert response.status_code == 405
+
+    def test_server_error(self):
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        os.chmod(dpl.app.config['DATABASE'], 0400)
+        # response = self.app.delete(
+        #     '/dpl/brothers/Vaporizer',
+        #     headers=self.auth
+        # )
+        # assert response.status_code == 500
+        response = self.app.put(
+            '/dpl/brothers/Vaporizer',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        assert response.status_code == 500
+        response = self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        assert response.status_code == 500
 
 if __name__ == '__main__':
     unittest.main()
