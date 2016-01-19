@@ -176,20 +176,50 @@ def getAllBrothers():
     return brothers
 
 
-@app.route('/dpl/search/<q>', methods=['GET'])
-def search(q):
+def makeSearchQuery(params, default):
+    requiredFields = ()
+    requiredValues = ()
+    optionalFields = ()
+    optionalValues = ()
+    for k, v in params.iteritems():
+        if v:
+            requiredFields = requiredFields + (k + ' like ?',)
+            requiredValues = requiredValues + ('%' + v + '%',)
+        else:
+            optionalFields = optionalFields + (k + ' like ?',)
+            optionalValues = optionalValues + ('%' + default + '%',)
+    requiredQuery = ' AND '.join(requiredFields)
+    requiredQuery = '(' + requiredQuery + ')' if requiredQuery else ''
+    optionalQuery = ' OR '.join(optionalFields)
+    optionalQuery = '(' + optionalQuery + ')' if optionalQuery else ''
+    
+    if requiredQuery and optionalQuery:
+        query = 'WHERE {0} AND {1}'.format(requiredQuery, optionalQuery)
+    else:
+        query = 'WHERE {0}'.format(requiredQuery or optionalQuery)
+    values = requiredValues + optionalValues
+    return values, query
+
+@app.route('/dpl/search', methods=['GET'])
+def search():
+    default = request.args.get('q', '')
+    params = dict(
+        nickname = request.args.get('nickname', ''),
+        name = request.args.get('name', ''),
+        big = request.args.get('big', ''),
+        year = request.args.get('year', '')
+    )
+    values, query = makeSearchQuery(params, default)
     conn = _get_conn()
     cur = conn.cursor()
-    q = '%' + q + '%'
-    t = (q, q, q, q)
-    cmd = 'SELECT * FROM brothers WHERE nickname LIKE ? OR name LIKE ? OR big LIKE ? OR year LIKE ?'
-    cur.execute(cmd, t)
+    cmd = 'SELECT * FROM brothers {query}'.format(query=query)
+    cur.execute(cmd, values)
     allBrothers = cur.fetchall()
     cur.close()
     conn.close()
     brothers = []
-    for bro in allBrothers:
-        brothers.append(Brother(bro[0], bro[1], bro[2], bro[3]).serialize())
+    for i in allBrothers:
+        brothers.append(Brother(i[0], i[1], i[2], i[3]).serialize())
     res = {}
     res['brothers'] = brothers
     return jsonify(res)

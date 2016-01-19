@@ -263,7 +263,7 @@ class DplTestCase(unittest.TestCase):
         expected['littles'] = [Karu, Dishficks, DoubleAgent]
         assert json.loads(response.data) == expected
 
-    def test_search(self):
+    def test_search_with_query(self):
         self.app.post(
             '/dpl/brothers/',
             data=json.dumps(Vaporizer),
@@ -282,11 +282,136 @@ class DplTestCase(unittest.TestCase):
             content_type='application/json',
             headers=self.auth
         )
-        response = self.app.get('/dpl/search/Vaporizer')
+        response = self.app.get('/dpl/search?q=Vapor')
         Karu['littles'] = []
         Sanctus['littles'] = []
         Vaporizer['littles'] = [Karu, Sanctus]
         expected = dict(brothers=[Vaporizer, Karu, Sanctus])
+        assert response.status_code == 200
+        assert json.loads(response.data) == expected
+
+        response = self.app.get('/dpl/search?q=201')
+        assert response.status_code == 200
+        assert json.loads(response.data) == expected
+
+        response = self.app.get('/dpl/search?q=Andr')
+        assert response.status_code == 200
+        expected = dict(brothers=[Vaporizer])
+        assert json.loads(response.data) == expected
+
+        response = self.app.get('/dpl/search?q=McL')
+        assert response.status_code == 200
+        assert json.loads(response.data) == expected
+
+    def test_search_with_year(self):
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Karu),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Sanctus),
+            content_type='application/json',
+            headers=self.auth
+        )
+        response = self.app.get('/dpl/search?year=201')
+        Karu['littles'] = []
+        Sanctus['littles'] = []
+        Vaporizer['littles'] = [Karu, Sanctus]
+        expected = dict(brothers=[Vaporizer, Karu, Sanctus])
+        assert response.status_code == 200
+        assert json.loads(response.data) == expected
+
+        response = self.app.get('/dpl/search?year=2014')
+        assert response.status_code == 200
+        expected = dict(brothers=[Vaporizer])
+        assert json.loads(response.data) == expected
+
+    def test_search_with_big(self):
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Karu),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Sanctus),
+            content_type='application/json',
+            headers=self.auth
+        )
+        response = self.app.get('/dpl/search?big=i')
+        Karu['littles'] = []
+        Sanctus['littles'] = []
+        Vaporizer['littles'] = [Karu, Sanctus]
+        expected = dict(brothers=[Vaporizer, Karu, Sanctus])
+        assert response.status_code == 200
+        assert json.loads(response.data) == expected
+
+        response = self.app.get('/dpl/search?big=McL')
+        assert response.status_code == 200
+        expected = dict(brothers=[Vaporizer])
+        assert json.loads(response.data) == expected
+
+    def test_search_with_big_and_year(self):
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Karu),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Sanctus),
+            content_type='application/json',
+            headers=self.auth
+        )
+        response = self.app.get('/dpl/search?big=Vaporizer&year=2012')
+        expected = dict(brothers=[Karu])
+        assert response.status_code == 200
+        assert json.loads(response.data) == expected
+
+    def test_search_with_big_year_and_query(self):
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(DoubleAgent),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Sanctus),
+            content_type='application/json',
+            headers=self.auth
+        )
+        response = self.app.get('/dpl/search?big=Vaporizer&year=2013&q=Sanc')
+        expected = dict(brothers=[Sanctus])
         assert response.status_code == 200
         assert json.loads(response.data) == expected
 
