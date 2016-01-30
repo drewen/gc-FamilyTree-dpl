@@ -455,6 +455,40 @@ class DplTestCase(unittest.TestCase):
         assert response.status_code == 200
         assert json.loads(response.data) == expected
 
+    def test_search_with_sort(self):
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Karu),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Sanctus),
+            content_type='application/json',
+            headers=self.auth
+        )
+        response = self.app.get('/dpl/search?sort=nickname')
+        expected = dict(brothers=[Karu, Sanctus, Vaporizer])
+        assert response.status_code == 200
+        assert json.loads(response.data) == expected
+
+        response = self.app.get('/dpl/search?sort=-nickname')
+        expected = dict(brothers=[Vaporizer, Sanctus, Karu])
+        assert response.status_code == 200
+        assert json.loads(response.data) == expected
+
+        response = self.app.get('/dpl/search?sort=big&sort=+nickname')
+        expected = dict(brothers=[Vaporizer, Karu, Sanctus])
+        assert response.status_code == 200
+        assert json.loads(response.data) == expected
+
     def test_csv_upload(self):
         csvString = 'Name,Nickname,Big,Year\nAndrew Smith,Vaporizer,McLovin\',2014\nKyle Halstead,Karu,Vaporizer,2012'
         response = self.app.post('/dpl/import/')

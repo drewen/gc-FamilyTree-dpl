@@ -190,7 +190,7 @@ def getAllBrothers():
     return brothers
 
 
-def makeSearchQuery(params, default):
+def makeSearchQuery(params, default, sort):
     requiredFields = ()
     requiredValues = ()
     optionalFields = ()
@@ -211,6 +211,15 @@ def makeSearchQuery(params, default):
         query = 'WHERE {0} AND {1}'.format(requiredQuery, optionalQuery)
     else:
         query = 'WHERE {0}'.format(requiredQuery or optionalQuery)
+
+    if sort:
+        orderList = []
+        for kind in sort:
+            direction = 'DESC' if '-' in kind else 'ASC'
+            kind = kind.lstrip('+-')
+            orderList.append('{kind} {direction}'.format(kind=kind, direction=direction))
+        orderBy = ' ORDER BY {fields}'.format(fields=', '.join(orderList))
+        query += orderBy
     values = requiredValues + optionalValues
     return values, query
 
@@ -223,7 +232,8 @@ def search():
         big = request.args.get('big', ''),
         year = request.args.get('year', '')
     )
-    values, query = makeSearchQuery(params, default)
+    sort = request.args.getlist('sort')
+    values, query = makeSearchQuery(params, default, sort)
     conn = _get_conn()
     cur = conn.cursor()
     cmd = 'SELECT * FROM brothers {query}'.format(query=query)
