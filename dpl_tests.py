@@ -6,6 +6,7 @@ import json
 from werkzeug.datastructures import Headers
 from base64 import b64encode
 from StringIO import StringIO
+from copy import deepcopy
 
 Vaporizer = dict(
     name='Andrew Smith',
@@ -42,7 +43,6 @@ DoubleAgent = dict(
     big='Vaporizer',
     year=2013
 )
-
 
 class DplTestCase(unittest.TestCase):
 
@@ -90,7 +90,7 @@ class DplTestCase(unittest.TestCase):
             content_type='application/json',
             headers=self.auth
         )
-        expected = Vaporizer
+        expected = deepcopy(Vaporizer)
         expected['littles'] = []
         assert json.loads(response.data) == expected
         response = self.app.get('/dpl/brothers/Vaporizer')
@@ -165,8 +165,8 @@ class DplTestCase(unittest.TestCase):
             headers=self.auth
         )
         response = self.app.get('/dpl/brothers/Vaporizer')
-        expected = Vaporizer
-        expected['littles'] = [Karu, Sanctus]
+        expected = deepcopy(Vaporizer)
+        expected['littles'] = [deepcopy(Karu), deepcopy(Sanctus)]
         expected['littles'][0]['littles'] = []
         expected['littles'][1]['littles'] = []
         assert response.status_code == 200
@@ -186,7 +186,7 @@ class DplTestCase(unittest.TestCase):
             headers=self.auth
         )
         response = self.app.get('/dpl/brothers/Vaporizer')
-        expected = Vaporizer
+        expected = deepcopy(Vaporizer)
         expected['littles'] = []
         assert response.status_code == 200
         assert json.loads(response.data) == expected
@@ -201,6 +201,50 @@ class DplTestCase(unittest.TestCase):
         expected['littles'][0]['big'] = 'Vaporizer'
         assert response.status_code == 200
         assert json.loads(response.data) == expected
+
+    def test_change_nickname(self):
+        # Add a brother and a little
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Karu),
+            content_type='application/json',
+            headers=self.auth
+        )
+        response = self.app.put(
+            '/dpl/brothers/Vaporizer',
+            data=json.dumps(dict(nickname='Vaporizo')),
+            content_type='application/json',
+            headers=self.auth
+        )
+        assert response.status_code == 200
+        KaruEditted = dict(
+            name='Kyle Halstead',
+            nickname='Karu',
+            big='Vaporizo',
+            year=2012,
+            littles=[]
+        )
+        VaporizerEditted = dict(
+            name='Andrew Smith',
+            nickname='Vaporizo',
+            big='McLovin\'',
+            year=2014,
+            littles=[KaruEditted]
+        )
+        assert json.loads(response.data) == VaporizerEditted
+        response = self.app.get('/dpl/brothers/Karu')
+        assert response.status_code == 200
+        assert json.loads(response.data) == KaruEditted
+        # Brother by old name no longer exists
+        response = self.app.get('/dpl/brothers/Vaporizer')
+        assert response.status_code == 404
+
 
     def test_sort_littles(self):
         self.app.post(
@@ -246,21 +290,26 @@ class DplTestCase(unittest.TestCase):
             headers=self.auth
         )
         response = self.app.get('/dpl/brothers/Vaporizer')
-        expected = Vaporizer
-        Karu['littles'] = []
-        Sanctus['littles'] = []
-        DumpsterTurtle['littles'] = []
-        DoubleAgent['littles'] = []
-        Dishficks['littles'] = [DumpsterTurtle]
+        expected = deepcopy(Vaporizer)
+        expKaru = deepcopy(Karu)
+        expKaru['littles'] = []
+        expSanctus = deepcopy(Sanctus)
+        expSanctus['littles'] = []
+        expDumpsterTurtle = deepcopy(DumpsterTurtle)
+        expDumpsterTurtle['littles'] = []
+        expDoubleAgent = deepcopy(DoubleAgent)
+        expDoubleAgent['littles'] = []
+        expDishficks = deepcopy(Dishficks)
+        expDishficks['littles'] = [expDumpsterTurtle]
         # heaviest in the middle, other two sorted by insertion order around center
-        expected['littles'] = [DoubleAgent, Dishficks, Sanctus, Karu]
+        expected['littles'] = [expDoubleAgent, expDishficks, expSanctus, expKaru]
         assert json.loads(response.data) == expected
         self.app.delete(
             '/dpl/brothers/Sanctus',
             headers=self.auth
         )
         response = self.app.get('/dpl/brothers/Vaporizer')
-        expected['littles'] = [Karu, Dishficks, DoubleAgent]
+        expected['littles'] = [expKaru, expDishficks, expDoubleAgent]
         assert json.loads(response.data) == expected
 
     def test_search_with_query(self):
@@ -283,9 +332,6 @@ class DplTestCase(unittest.TestCase):
             headers=self.auth
         )
         response = self.app.get('/dpl/search?q=Vapor')
-        Karu['littles'] = []
-        Sanctus['littles'] = []
-        Vaporizer['littles'] = [Karu, Sanctus]
         expected = dict(brothers=[Vaporizer, Karu, Sanctus])
         assert response.status_code == 200
         assert json.loads(response.data) == expected
@@ -323,9 +369,6 @@ class DplTestCase(unittest.TestCase):
             headers=self.auth
         )
         response = self.app.get('/dpl/search?year=201')
-        Karu['littles'] = []
-        Sanctus['littles'] = []
-        Vaporizer['littles'] = [Karu, Sanctus]
         expected = dict(brothers=[Vaporizer, Karu, Sanctus])
         assert response.status_code == 200
         assert json.loads(response.data) == expected
@@ -355,9 +398,6 @@ class DplTestCase(unittest.TestCase):
             headers=self.auth
         )
         response = self.app.get('/dpl/search?big=i')
-        Karu['littles'] = []
-        Sanctus['littles'] = []
-        Vaporizer['littles'] = [Karu, Sanctus]
         expected = dict(brothers=[Vaporizer, Karu, Sanctus])
         assert response.status_code == 200
         assert json.loads(response.data) == expected
@@ -434,9 +474,11 @@ class DplTestCase(unittest.TestCase):
             content_type='multipart/form-data',
             headers=self.auth
         )
-        Karu['littles'] = []
-        Vaporizer['littles'] = [Karu]
-        expected = dict(brothers=[Vaporizer, Karu])
+        expKaru = deepcopy(Karu)
+        expKaru['littles'] = []
+        expVaporizer = deepcopy(Vaporizer)
+        expVaporizer['littles'] = [expKaru]
+        expected = dict(brothers=[expVaporizer, expKaru])
         assert response.status_code == 200
         assert response.data == 'All rows imported successfully!'
         response = self.app.get('/dpl/brothers/')
@@ -448,8 +490,8 @@ class DplTestCase(unittest.TestCase):
             content_type='multipart/form-data',
             headers=self.auth
         )
-        Vaporizer['name'] = 'Andrew Smoth'
-        expected = dict(brothers=[Vaporizer, Karu])
+        expVaporizer['name'] = 'Andrew Smoth'
+        expected = dict(brothers=[expVaporizer, expKaru])
         assert response.status_code == 200
         assert response.data == 'All rows imported successfully!'
         response = self.app.get('/dpl/brothers/')
@@ -489,13 +531,6 @@ class DplTestCase(unittest.TestCase):
             content_type='application/json',
             headers=self.auth
         )
-        response = self.app.put(
-            '/dpl/brothers/Vaporizer',
-            data=json.dumps(dict(nickname='Vaporizer')),
-            content_type='application/json',
-            headers=self.auth
-        )
-        assert response.status_code == 400
 
     def test_resource_not_found(self):
         response = self.app.get(

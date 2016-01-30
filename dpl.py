@@ -71,15 +71,16 @@ class Brother:
     def __lt__(self, other):
         return self.weight > other.weight
 
-    def serialize(self):
+    def serialize(self, littles=True):
         obj = {}
         obj['name'] = self.name
         obj['nickname'] = self.nickname
         obj['big'] = self.big
         obj['year'] = self.year
-        obj['littles'] = []
-        for i in self.littles:
-            obj['littles'].append(i.serialize())
+        if littles:
+            obj['littles'] = []
+            for i in self.littles:
+                obj['littles'].append(i.serialize())
         return obj
 
     def create(self):
@@ -126,6 +127,19 @@ class Brother:
         cur = conn.cursor()
         t = (self.nickname,)
         cmd = 'DELETE FROM brothers WHERE nickname = ?'
+        cur.execute(cmd, t)
+        cur.close()
+        conn.commit()
+        conn.close()
+        return True
+
+    def changeNickname(self, newNickname):
+        conn = _get_conn()
+        cur = conn.cursor()
+        t = (newNickname, self.nickname)
+        cmd = 'UPDATE brothers SET nickname = ? WHERE nickname = ?'
+        cur.execute(cmd, t)
+        cmd = 'UPDATE brothers SET big = ? WHERE big = ?'
         cur.execute(cmd, t)
         cur.close()
         conn.commit()
@@ -219,7 +233,7 @@ def search():
     conn.close()
     brothers = []
     for i in allBrothers:
-        brothers.append(Brother(i[0], i[1], i[2], i[3]).serialize())
+        brothers.append(Brother(i[0], i[1], i[2], i[3]).serialize(False))
     res = {}
     res['brothers'] = brothers
     return jsonify(res)
@@ -317,6 +331,16 @@ def update(nickname):
         name = req.get('name', '')
         big = req.get('big', '')
         year = req.get('year', '')
+        newNickname = req.get('nickname', '')
+        # If we have a newly provided nickname that differs from the one we
+        # already have, change the brother beforehand
+        if newNickname and nickname and (newNickname != nickname):
+            if brother.changeNickname(newNickname):
+                if name:
+                    nickname = newNickname
+                else:
+                    brother.nickname = newNickname
+                    return jsonify(brother.read().serialize())
         if nickname and name:
             try:
                 brother = Brother(nickname, name, big, year).update()
