@@ -1,0 +1,10 @@
+web:
+  build: .
+  command: bash -c "python -u init_db.py && gunicorn -c gunicorn.config.py dpl:app"
+  ports:
+    - "8051:8051"
+  volumes:
+    - "${FAMILY_TREE_DB}:/home/db"
+  environment:
+    - DB_PATH=/home/db/data.db
+    - PORT=8051

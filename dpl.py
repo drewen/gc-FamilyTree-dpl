@@ -10,24 +10,28 @@ app = Flask(__name__)
 
 def getUsername():
     try:
-        with open(os.path.join(app.root_path, '../data/username'), 'r') as f:
-            username = f.readline()
+        username = os.environ['API_USERNAME']
     except:
-        username = 'admin'
+         username = 'admin'
     return username
 
 
 def getPassword():
     try:
-        with open(os.path.join(app.root_path, '../data/password'), 'r') as f:
-            password = f.readline()
+        password = os.environ['API_PASSWORD']
     except:
         password = 'password'
     return password
 
+def getDatabase():
+    try:
+        database = os.environ['DB_PATH']
+    except:
+        database = os.path.join(app.root_path, '../data/brothers.db')
+    return database
 
 app.config.update(dict(
-    DATABASE=os.path.join(app.root_path, '../data/brothers.db'),
+    DATABASE=getDatabase(),
     DEBUG=True,
     USERNAME=getUsername(),
     PASSWORD=getPassword()
@@ -206,7 +210,7 @@ def makeSearchQuery(params, default, sort):
     requiredQuery = '(' + requiredQuery + ')' if requiredQuery else ''
     optionalQuery = ' OR '.join(optionalFields)
     optionalQuery = '(' + optionalQuery + ')' if optionalQuery else ''
-    
+
     if requiredQuery and optionalQuery:
         query = 'WHERE {0} AND {1}'.format(requiredQuery, optionalQuery)
     else:
@@ -419,4 +423,4 @@ def after_request(response):
 
 
 if __name__ == '__main__': # pragma: no cover
-    app.run(host='0.0.0.0', port=80)
+    app.run(host='0.0.0.0', port=8051)

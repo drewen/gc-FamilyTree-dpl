@@ -1,6 +1,6 @@
 ## Data Persistence Layer/RESTful API for WPI Men's Glee Club Family Tree
 #### Setting Up:
-#####This assumes you have:
+##### This assumes you have:
 * Python 2.7+
 * pip
 * git
@@ -13,14 +13,20 @@ If you don't, look into getting those...
 3. Run `virtualenv venv`
 4. Run `. venv/bin/activate`
 5. Run `pip install -r requirements.txt`
+6. Run `python init_db.py`
 
 #### To start:
 1. Make sure virtualenv is active
-2. Run `python wsgi.py`
+2. Run `python dpl.py`
 
 Simple as that. Now it's running on 127.0.0.1:8051
 
-Endpoints:
+#### Alternative through docker
+1. Ensure you have docker and docker-compose
+2. Create a folder for the data outside of the container (ie. `/Users/<your user>/data`)
+3. Run `FAMILY_TREE_DB=<path from above> docker-compose up`. Alternatively, set `FAMILY_TREE_DB` to the path set above
+
+#### Endpoints:
 
 `/dpl/brothers/`:
 
