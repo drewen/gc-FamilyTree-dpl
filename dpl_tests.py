@@ -3,6 +3,7 @@ import dpl
 import unittest
 import tempfile
 import json
+from datetime import date
 from werkzeug.datastructures import Headers
 from base64 import b64encode
 from StringIO import StringIO
@@ -35,7 +36,8 @@ DumpsterTurtle = dict(
     name='Jeremy Filteau',
     nickname='Dumpster Turtle',
     big='Dishficks',
-    year=2018
+    # This ensures any lines with Dumpster Turtle are "active" for test purposes
+    year=date.today().year
 )
 DoubleAgent = dict(
     name='Cory Lauer',
@@ -92,6 +94,7 @@ class DplTestCase(unittest.TestCase):
         )
         expected = deepcopy(Vaporizer)
         expected['littles'] = []
+        expected['activeBranch'] = False
         assert json.loads(response.data) == expected
         response = self.app.get('/dpl/brothers/Vaporizer')
         assert response.status_code == 200
@@ -113,7 +116,8 @@ class DplTestCase(unittest.TestCase):
             nickname='Vaporizer',
             big='Steve',
             year=2010,
-            littles=[]
+            littles=[],
+            activeBranch=False
         )
         response = self.app.put(
             '/dpl/brothers/Vaporizer',
@@ -166,9 +170,52 @@ class DplTestCase(unittest.TestCase):
         )
         response = self.app.get('/dpl/brothers/Vaporizer')
         expected = deepcopy(Vaporizer)
+        expected['activeBranch'] = False
         expected['littles'] = [deepcopy(Karu), deepcopy(Sanctus)]
         expected['littles'][0]['littles'] = []
+        expected['littles'][0]['activeBranch'] = False
         expected['littles'][1]['littles'] = []
+        expected['littles'][1]['activeBranch'] = False
+        assert response.status_code == 200
+        assert json.loads(response.data) == expected
+
+    def test_littles_with_active_branch(self):
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Vaporizer),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Dishficks),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(Sanctus),
+            content_type='application/json',
+            headers=self.auth
+        )
+        self.app.post(
+            '/dpl/brothers/',
+            data=json.dumps(DumpsterTurtle),
+            content_type='application/json',
+            headers=self.auth
+        )
+        response = self.app.get('/dpl/brothers/Vaporizer')
+        # Vaporizer, Dishficks, and Dumpster Turtle are active due to Dumpster Turtle; Sanctus is inactive
+        expected = deepcopy(Vaporizer)
+        expected['activeBranch'] = True
+        expected['littles'] = [deepcopy(Dishficks), deepcopy(Sanctus)]
+        expectedDumpsterTurtle = deepcopy(DumpsterTurtle)
+        expectedDumpsterTurtle['littles'] = []
+        expectedDumpsterTurtle['activeBranch'] = True
+        expected['littles'][0]['littles'] = [expectedDumpsterTurtle]
+        expected['littles'][0]['activeBranch'] = True
+        expected['littles'][1]['littles'] = []
+        expected['littles'][1]['activeBranch'] = False
         assert response.status_code == 200
         assert json.loads(response.data) == expected
 
@@ -188,6 +235,7 @@ class DplTestCase(unittest.TestCase):
         response = self.app.get('/dpl/brothers/Vaporizer')
         expected = deepcopy(Vaporizer)
         expected['littles'] = []
+        expected['activeBranch'] = False
         assert response.status_code == 200
         assert json.loads(response.data) == expected
         response = self.app.put(
@@ -199,6 +247,7 @@ class DplTestCase(unittest.TestCase):
         expected['littles'] = [Dishficks]
         expected['littles'][0]['littles'] = []
         expected['littles'][0]['big'] = 'Vaporizer'
+        expected['littles'][0]['activeBranch'] = False
         assert response.status_code == 200
         assert json.loads(response.data) == expected
 
@@ -228,14 +277,16 @@ class DplTestCase(unittest.TestCase):
             nickname='Karu',
             big='Vaporizo',
             year=2012,
-            littles=[]
+            littles=[],
+            activeBranch=False
         )
         VaporizerEditted = dict(
             name='Andrew Smith',
             nickname='Vaporizo',
             big='McLovin\'',
             year=2014,
-            littles=[KaruEditted]
+            littles=[KaruEditted],
+            activeBranch=False
         )
         assert json.loads(response.data) == VaporizerEditted
         response = self.app.get('/dpl/brothers/Karu')
@@ -293,16 +344,22 @@ class DplTestCase(unittest.TestCase):
         expected = deepcopy(Vaporizer)
         expKaru = deepcopy(Karu)
         expKaru['littles'] = []
+        expKaru['activeBranch'] = False
         expSanctus = deepcopy(Sanctus)
         expSanctus['littles'] = []
+        expSanctus['activeBranch'] = False
         expDumpsterTurtle = deepcopy(DumpsterTurtle)
         expDumpsterTurtle['littles'] = []
+        expDumpsterTurtle['activeBranch'] = True
         expDoubleAgent = deepcopy(DoubleAgent)
         expDoubleAgent['littles'] = []
+        expDoubleAgent['activeBranch'] = False
         expDishficks = deepcopy(Dishficks)
         expDishficks['littles'] = [expDumpsterTurtle]
+        expDishficks['activeBranch'] = True
         # heaviest in the middle, other two sorted by insertion order around center
         expected['littles'] = [expDoubleAgent, expDishficks, expSanctus, expKaru]
+        expected['activeBranch'] = True
         assert json.loads(response.data) == expected
         self.app.delete(
             '/dpl/brothers/Sanctus',
@@ -510,8 +567,10 @@ class DplTestCase(unittest.TestCase):
         )
         expKaru = deepcopy(Karu)
         expKaru['littles'] = []
+        expKaru['activeBranch'] = False
         expVaporizer = deepcopy(Vaporizer)
         expVaporizer['littles'] = [expKaru]
+        expVaporizer['activeBranch'] = False
         expected = dict(brothers=[expVaporizer, expKaru])
         assert response.status_code == 200
         assert response.data == 'All rows imported successfully!'

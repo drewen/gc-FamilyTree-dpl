@@ -1,6 +1,7 @@
 import os
 import csv
 import sqlite3
+from datetime import date
 from functools import wraps
 from StringIO import StringIO
 from flask import Flask, jsonify, request, abort, Response, make_response
@@ -71,9 +72,20 @@ class Brother:
         self.year = year
         self.littles = self.getLittles()
         self.weight = self.getWeight()
+        self.activeBranch = False
+        self.activeBranch = self.isActiveBranch()
 
     def __lt__(self, other):
         return self.weight > other.weight
+
+    def isActiveBranch(self):
+        currentYear = date.today().year
+        if self.year == currentYear or self.activeBranch:
+            return True
+        elif any(little.isActiveBranch() for little in self.littles):
+            return True
+        else:
+            return False
 
     def serialize(self, littles=True):
         obj = {}
@@ -85,6 +97,7 @@ class Brother:
             obj['littles'] = []
             for i in self.littles:
                 obj['littles'].append(i.serialize())
+            obj['activeBranch'] = self.activeBranch
         return obj
 
     def create(self):
