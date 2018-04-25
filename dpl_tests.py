@@ -37,7 +37,7 @@ DumpsterTurtle = dict(
     nickname='Dumpster Turtle',
     big='Dishficks',
     # This ensures any lines with Dumpster Turtle are "active" for test purposes
-    year=date.today().year
+    year=date.today().year + 1
 )
 DoubleAgent = dict(
     name='Cory Lauer',

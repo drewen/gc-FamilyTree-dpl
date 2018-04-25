@@ -80,7 +80,7 @@ class Brother:
 
     def isActiveBranch(self):
         currentYear = date.today().year
-        if self.year == currentYear or self.activeBranch:
+        if self.year >= currentYear or self.activeBranch:
             return True
         elif any(little.isActiveBranch() for little in self.littles):
             return True
