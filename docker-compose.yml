@@ -6,5 +6,6 @@ web:
   volumes:
     - "${FAMILY_TREE_DB}:/home/db"
   environment:
+    - API_PASSWORD=${API_PASSWORD}
     - DB_PATH=/home/db/data.db
     - PORT=8051
